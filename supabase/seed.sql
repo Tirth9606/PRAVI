@@ -14,20 +14,29 @@
 -- 1) Auth users. Inserting into auth.users fires handle_new_auth_user(), which
 --    creates the matching public.users profile with the role from metadata.
 -- ---------------------------------------------------------------------------
+-- NOTE: the token columns (confirmation_token, recovery_token, email_change, …)
+-- MUST be '' (empty string), NOT NULL. GoTrue scans them into non-nullable Go
+-- strings; a NULL there causes "Database error querying schema" on login.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change,
+  email_change_token_new, email_change_token_current,
+  phone_change, phone_change_token, reauthentication_token
 ) values
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111111', 'authenticated', 'authenticated',
    'admin@roadgov.demo', crypt('Password123!', gen_salt('bf')), now(), now(), now(),
-   '{"provider":"email","providers":["email"],"role":"ADMIN"}', '{"name":"Anjali Mehta","role":"ADMIN"}'),
+   '{"provider":"email","providers":["email"],"role":"ADMIN"}', '{"name":"Anjali Mehta","role":"ADMIN"}',
+   '', '', '', '', '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '22222222-2222-2222-2222-222222222222', 'authenticated', 'authenticated',
    'officer@roadgov.demo', crypt('Password123!', gen_salt('bf')), now(), now(), now(),
-   '{"provider":"email","providers":["email"],"role":"ROAD_OFFICER"}', '{"name":"Rajesh Patel","role":"ROAD_OFFICER"}'),
+   '{"provider":"email","providers":["email"],"role":"ROAD_OFFICER"}', '{"name":"Rajesh Patel","role":"ROAD_OFFICER"}',
+   '', '', '', '', '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '33333333-3333-3333-3333-333333333333', 'authenticated', 'authenticated',
    'inspector@roadgov.demo', crypt('Password123!', gen_salt('bf')), now(), now(), now(),
-   '{"provider":"email","providers":["email"],"role":"FIELD_INSPECTOR"}', '{"name":"Priya Desai","role":"FIELD_INSPECTOR"}')
+   '{"provider":"email","providers":["email"],"role":"FIELD_INSPECTOR"}', '{"name":"Priya Desai","role":"FIELD_INSPECTOR"}',
+   '', '', '', '', '', '', '', '')
 on conflict (id) do nothing;
 
 -- Ensure identities exist (needed for password login in newer GoTrue versions).

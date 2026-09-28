@@ -35,18 +35,46 @@ export async function signInAction(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
-    return { code: "invalid", error: "Invalid email or password." };
+    // Surface the real reason to the server log, and distinguish genuine
+    // "invalid credentials" from configuration/API errors so they are debuggable.
+    console.error("[auth] signInWithPassword failed:", {
+      status: (error as { status?: number } | null)?.status,
+      code: (error as { code?: string } | null)?.code,
+      message: error?.message,
+    });
+    const msg = error?.message ?? "Sign-in failed.";
+    const isCredentialError = /invalid login credentials/i.test(msg);
+    if (isCredentialError) {
+      return { code: "invalid", error: "Invalid email or password." };
+    }
+    // e.g. "Email not confirmed", "Invalid API key", network/URL errors.
+    return { code: "unknown", error: msg };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("*")
     .eq("id", data.user.id)
     .maybeSingle();
 
+  if (profileError) {
+    console.error("[auth] profile lookup failed:", profileError.message);
+    await supabase.auth.signOut();
+    return { code: "unknown", error: `Profile lookup failed: ${profileError.message}` };
+  }
+
   const typed = profile as AppUser | null;
-  if (!typed || typed.status !== "ACTIVE") {
-    // Block inactive/unprovisioned accounts and end the session.
+  if (!typed) {
+    // Authenticated, but no application profile row exists (seed not applied,
+    // or the auth-user trigger did not run for this account).
+    await supabase.auth.signOut();
+    return {
+      code: "unknown",
+      error:
+        "Signed in, but no application profile exists for this account. Apply the seed or have an admin provision your profile.",
+    };
+  }
+  if (typed.status !== "ACTIVE") {
     await supabase.auth.signOut();
     return { code: "inactive", error: "Your account is inactive. Contact your administrator." };
   }

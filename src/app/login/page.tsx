@@ -11,11 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const metadata = { title: "Sign in" };
 
-const DEMO_ACCOUNTS = [
-  { role: "ADMIN", email: "admin@roadgov.demo" },
-  { role: "ROAD_OFFICER", email: "officer@roadgov.demo" },
-  { role: "FIELD_INSPECTOR", email: "inspector@roadgov.demo" },
-];
+// const DEMO_ACCOUNTS = [
+//   { role: "ADMIN", email: "admin@roadgov.demo" },
+//   { role: "ROAD_OFFICER", email: "officer@roadgov.demo" },
+//   { role: "FIELD_INSPECTOR", email: "inspector@roadgov.demo" },
+// ];
 
 export default async function LoginPage() {
   const ctx = await getCurrentUser().catch(() => null);
@@ -49,16 +49,16 @@ export default async function LoginPage() {
               {dict.auth.demoAccounts}
             </p>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              {DEMO_ACCOUNTS.map((a) => (
+              {/* {DEMO_ACCOUNTS.map((a) => (
                 <li key={a.email} className="flex justify-between gap-2">
                   <span className="font-medium text-foreground">{a.email}</span>
                   <span>{a.role}</span>
                 </li>
-              ))}
+              ))} */}
             </ul>
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            {/* <p className="mt-2 text-[11px] text-muted-foreground">
               Passwords are set during seeding — see README &gt; Demo flow.
-            </p>
+            </p> */}
           </div>
         </CardContent>
       </Card>

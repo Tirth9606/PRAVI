@@ -37,32 +37,63 @@ import { AuditTrail } from "@/components/ui/audit-trail";
 import { ProgressBar } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/states";
 import { DocumentUpload } from "@/features/documents/document-upload";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatINR, formatDate } from "@/lib/utils";
 import type { AppUser, Contractor } from "@/types/models";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const detail = await getProjectDetail(id).catch(() => null);
-  return { title: detail?.project.project_code ?? "Project" };
+
+  return {
+    title: detail?.project.project_code ?? "Project",
+  };
 }
 
-export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const { locale, dict } = await getDict();
   const detail = await getProjectDetail(id);
+
   if (!detail) notFound();
 
   const sb = await createSupabaseServerClient();
+
   const [{ data: contractors }, { data: inspectors }] = await Promise.all([
-    sb.from("contractors").select("*").eq("status", "ACTIVE").order("name"),
-    sb.from("users").select("*").eq("role", "FIELD_INSPECTOR").eq("status", "ACTIVE").order("name"),
+    sb
+      .from("contractors")
+      .select("*")
+      .eq("status", "ACTIVE")
+      .order("name"),
+    sb
+      .from("users")
+      .select("*")
+      .eq("role", "FIELD_INSPECTOR")
+      .eq("status", "ACTIVE")
+      .order("name"),
   ]);
 
   const p = detail.project;
-  const activeContract = detail.contracts.find((c) => c.status !== "TERMINATED");
+  const activeContract = detail.contracts.find(
+    (c) => c.status !== "TERMINATED"
+  );
 
   const overview = (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -71,25 +102,67 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardHeader>
             <CardTitle>{dict.tabs.overview}</CardTitle>
           </CardHeader>
+
           <CardContent>
             <DetailList
               items={[
-                { label: dict.fields.projectCode, value: p.project_code },
-                { label: dict.common.status, value: <StatusBadge value={p.status} /> },
-                { label: dict.fields.roadName, value: p.road_name },
-                { label: dict.fields.roadType, value: enumLabel(p.road_type, locale) },
-                { label: dict.fields.location, value: p.location },
-                { label: dict.fields.ward, value: p.ward },
-                { label: dict.fields.lengthKm, value: p.length_km },
-                { label: dict.fields.duration, value: p.estimated_duration_months },
-                { label: dict.fields.estimatedCost, value: formatINR(p.estimated_cost) },
-                { label: dict.fields.approvedCost, value: formatINR(p.approved_cost) },
-                { label: dict.fields.finalCost, value: formatINR(p.final_cost) },
-                { label: dict.fields.progress, value: <ProgressBar value={detail.latestProgress ?? 0} /> },
+                {
+                  label: dict.fields.projectCode,
+                  value: p.project_code,
+                },
+                {
+                  label: dict.common.status,
+                  value: <StatusBadge value={p.status} />,
+                },
+                {
+                  label: dict.fields.roadName,
+                  value: p.road_name,
+                },
+                {
+                  label: dict.fields.roadType,
+                  value: enumLabel(p.road_type, locale),
+                },
+                {
+                  label: dict.fields.location,
+                  value: p.location,
+                },
+                {
+                  label: dict.fields.ward,
+                  value: p.ward,
+                },
+                {
+                  label: dict.fields.lengthKm,
+                  value: p.length_km,
+                },
+                {
+                  label: dict.fields.duration,
+                  value: p.estimated_duration_months,
+                },
+                {
+                  label: dict.fields.estimatedCost,
+                  value: formatINR(p.estimated_cost),
+                },
+                {
+                  label: dict.fields.approvedCost,
+                  value: formatINR(p.approved_cost),
+                },
+                {
+                  label: dict.fields.finalCost,
+                  value: formatINR(p.final_cost),
+                },
+                {
+                  label: dict.fields.progress,
+                  value: (
+                    <ProgressBar value={detail.latestProgress ?? 0} />
+                  ),
+                },
               ]}
             />
+
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{dict.fields.reason}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {dict.fields.reason}
+              </p>
               <p className="text-sm">{p.project_reason}</p>
             </div>
           </CardContent>
@@ -99,14 +172,22 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardHeader>
             <CardTitle>Next action</CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-3">
-            <NextAction status={p.status} projectId={p.id} hasActiveContract={!!activeContract} />
-            {!["COMPLETED", "HANDED_OVER", "CANCELLED"].includes(p.status) && (
+            <NextAction
+              status={p.status}
+              projectId={p.id}
+              hasActiveContract={!!activeContract}
+            />
+
+            {!["COMPLETED", "HANDED_OVER", "CANCELLED"].includes(
+              p.status
+            ) && (
               <ActionButton
                 variant="ghost"
                 size="sm"
                 confirm="Cancel this project? This cannot be undone."
-                action={() => cancelProjectAction(p.id)}
+                action={cancelProjectAction.bind(null, p.id)}
               >
                 Cancel project
               </ActionButton>
@@ -118,8 +199,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardHeader>
             <CardTitle>Assign inspector</CardTitle>
           </CardHeader>
+
           <CardContent>
-            <AssignInspectorForm projectId={p.id} inspectors={(inspectors ?? []) as AppUser[]} />
+            <AssignInspectorForm
+              projectId={p.id}
+              inspectors={(inspectors ?? []) as AppUser[]}
+            />
           </CardContent>
         </Card>
       </div>
@@ -128,6 +213,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <CardHeader>
           <CardTitle>Lifecycle</CardTitle>
         </CardHeader>
+
         <CardContent>
           <LifecycleTimeline status={p.status} />
         </CardContent>
@@ -136,7 +222,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   );
 
   const tabs = [
-    { key: "overview", label: dict.tabs.overview, content: overview },
+    {
+      key: "overview",
+      label: dict.tabs.overview,
+      content: overview,
+    },
+
     {
       key: "approval",
       label: dict.tabs.approval,
@@ -144,12 +235,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       content: (
         <Card>
           <CardContent className="space-y-4 pt-5">
-            {p.status === "UNDER_REVIEW" && <ApproveProjectForm projectId={p.id} />}
+            {p.status === "UNDER_REVIEW" && (
+              <ApproveProjectForm projectId={p.id} />
+            )}
+
             {detail.approvals.length === 0 ? (
               <EmptyState title={dict.common.noResults} />
             ) : (
               <SimpleTable
-                head={["Type", dict.common.status, dict.fields.date, dict.fields.remarks]}
+                head={[
+                  "Type",
+                  dict.common.status,
+                  dict.fields.date,
+                  dict.fields.remarks,
+                ]}
                 rows={detail.approvals.map((a) => [
                   enumLabel(a.approval_type, locale),
                   <StatusBadge key="s" value={a.status} />,
@@ -162,6 +261,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       ),
     },
+
     {
       key: "budget",
       label: dict.tabs.budget,
@@ -169,19 +269,33 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       content: (
         <Card>
           <CardContent className="space-y-4 pt-5">
-            {p.status === "APPROVED" && <BudgetForm projectId={p.id} />}
+            {p.status === "APPROVED" && (
+              <BudgetForm projectId={p.id} />
+            )}
+
             {detail.budgets.length === 0 ? (
               <EmptyState title={dict.common.noResults} />
             ) : (
               <SimpleTable
-                head={[dict.fields.estimatedCost, dict.fields.approvedCost, dict.fields.fundingSource, dict.common.status, ""]}
+                head={[
+                  dict.fields.estimatedCost,
+                  dict.fields.approvedCost,
+                  dict.fields.fundingSource,
+                  dict.common.status,
+                  "",
+                ]}
                 rows={detail.budgets.map((b) => [
                   formatINR(b.estimated_amount),
                   formatINR(b.approved_amount),
                   b.funding_source,
                   <StatusBadge key="s" value={b.status} />,
-                  b.status !== "APPROVED" && p.status === "APPROVED" ? (
-                    <BudgetApproveInline key="a" budgetId={b.id} estimated={b.estimated_amount} />
+                  b.status !== "APPROVED" &&
+                  p.status === "APPROVED" ? (
+                    <BudgetApproveInline
+                      key="a"
+                      budgetId={b.id}
+                      estimated={b.estimated_amount}
+                    />
                   ) : (
                     "—"
                   ),
@@ -192,6 +306,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       ),
     },
+
     {
       key: "tender",
       label: dict.tabs.tender,
@@ -199,24 +314,42 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       content: (
         <Card>
           <CardContent className="space-y-6 pt-5">
-            {p.status === "BUDGET_APPROVED" && <TenderForm projectId={p.id} />}
+            {p.status === "BUDGET_APPROVED" && (
+              <TenderForm projectId={p.id} />
+            )}
+
             {detail.tenders.length === 0 ? (
               <EmptyState title={dict.common.noResults} />
             ) : (
               detail.tenders.map((t) => (
-                <div key={t.id} className="space-y-3 rounded-md border border-border p-4">
+                <div
+                  key={t.id}
+                  className="space-y-3 rounded-md border border-border p-4"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium">{t.tender_number}</p>
-                      <p className="text-sm text-muted-foreground">{formatINR(t.estimated_value)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatINR(t.estimated_value)}
+                      </p>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <StatusBadge value={t.status} />
-                      <TenderTransitionButtons tenderId={t.id} status={t.status} />
+                      <TenderTransitionButtons
+                        tenderId={t.id}
+                        status={t.status}
+                      />
                     </div>
                   </div>
-                  {(t.status === "OPEN" || t.status === "EVALUATION" || t.status === "CLOSED") && (
-                    <BidForm tenderId={t.id} contractors={(contractors ?? []) as Contractor[]} />
+
+                  {(t.status === "OPEN" ||
+                    t.status === "EVALUATION" ||
+                    t.status === "CLOSED") && (
+                    <BidForm
+                      tenderId={t.id}
+                      contractors={(contractors ?? []) as Contractor[]}
+                    />
                   )}
                 </div>
               ))
@@ -225,6 +358,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       ),
     },
+
     {
       key: "contractor",
       label: dict.tabs.contractor,
@@ -233,39 +367,88 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardContent className="space-y-4 pt-5">
             {p.status === "TENDERING" && detail.bids.length > 0 && (
               <div className="space-y-3">
-                <p className="text-sm font-medium">Select winning contractor</p>
-                <SelectContractorForm bids={detail.bids} contractors={(contractors ?? []) as Contractor[]} />
+                <p className="text-sm font-medium">
+                  Select winning contractor
+                </p>
+
+                <SelectContractorForm
+                  bids={detail.bids}
+                  contractors={(contractors ?? []) as Contractor[]}
+                />
               </div>
             )}
+
             {detail.bids.length > 0 && (
               <SimpleTable
-                head={[dict.fields.contractor, dict.fields.bidAmount, dict.common.status]}
+                head={[
+                  dict.fields.contractor,
+                  dict.fields.bidAmount,
+                  dict.common.status,
+                ]}
                 rows={detail.bids.map((b) => [
-                  ((contractors ?? []) as Contractor[]).find((c) => c.id === b.contractor_id)?.name ?? b.contractor_id,
+                  ((contractors ?? []) as Contractor[]).find(
+                    (c) => c.id === b.contractor_id
+                  )?.name ?? b.contractor_id,
                   formatINR(b.bid_amount),
                   <StatusBadge key="s" value={b.status} />,
                 ])}
               />
             )}
+
             {activeContract && (
               <div className="rounded-md border border-border p-4">
-                <p className="font-medium">{activeContract.contract_number}</p>
+                <p className="font-medium">
+                  {activeContract.contract_number}
+                </p>
+
                 <DetailList
                   items={[
-                    { label: dict.fields.contractValue, value: formatINR(activeContract.contract_value) },
-                    { label: dict.common.status, value: <StatusBadge value={activeContract.status} /> },
-                    { label: "Work Order", value: activeContract.work_order_number ?? "—" },
-                    { label: "Start", value: formatDate(activeContract.start_date) },
+                    {
+                      label: dict.fields.contractValue,
+                      value: formatINR(
+                        activeContract.contract_value
+                      ),
+                    },
+                    {
+                      label: dict.common.status,
+                      value: (
+                        <StatusBadge
+                          value={activeContract.status}
+                        />
+                      ),
+                    },
+                    {
+                      label: "Work Order",
+                      value:
+                        activeContract.work_order_number ?? "—",
+                    },
+                    {
+                      label: "Start",
+                      value: formatDate(
+                        activeContract.start_date
+                      ),
+                    },
                   ]}
                 />
-                {p.status === "CONTRACTOR_SELECTED" && <div className="mt-3"><WorkOrderForm contractId={activeContract.id} /></div>}
+
+                {p.status === "CONTRACTOR_SELECTED" && (
+                  <div className="mt-3">
+                    <WorkOrderForm
+                      contractId={activeContract.id}
+                    />
+                  </div>
+                )}
               </div>
             )}
-            {detail.bids.length === 0 && !activeContract && <EmptyState title={dict.common.noResults} />}
+
+            {detail.bids.length === 0 && !activeContract && (
+              <EmptyState title={dict.common.noResults} />
+            )}
           </CardContent>
         </Card>
       ),
     },
+
     {
       key: "construction",
       label: dict.tabs.construction,
@@ -273,12 +456,21 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       content: (
         <Card>
           <CardContent className="space-y-4 pt-5">
-            {p.status === "UNDER_CONSTRUCTION" && <ConstructionUpdateForm projectId={p.id} />}
+            {p.status === "UNDER_CONSTRUCTION" && (
+              <ConstructionUpdateForm projectId={p.id} />
+            )}
+
             {detail.updates.length === 0 ? (
               <EmptyState title={dict.common.noResults} />
             ) : (
               <SimpleTable
-                head={[dict.fields.date, "Stage", "Physical", "Financial", dict.common.status]}
+                head={[
+                  dict.fields.date,
+                  "Stage",
+                  "Physical",
+                  "Financial",
+                  dict.common.status,
+                ]}
                 rows={detail.updates.map((u) => [
                   formatDate(u.update_date),
                   u.current_stage,
@@ -292,6 +484,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       ),
     },
+
     {
       key: "inspections",
       label: dict.tabs.inspections,
@@ -300,15 +493,29 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <Card>
           <CardContent className="space-y-4 pt-5">
             {detail.inspections.length === 0 ? (
-              <EmptyState title={dict.common.noResults} description="Assigned inspectors submit construction inspections here." />
+              <EmptyState
+                title={dict.common.noResults}
+                description="Assigned inspectors submit construction inspections here."
+              />
             ) : (
               <SimpleTable
-                head={[dict.fields.date, dict.fields.progress, dict.fields.quality, dict.common.status]}
+                head={[
+                  dict.fields.date,
+                  dict.fields.progress,
+                  dict.fields.quality,
+                  dict.common.status,
+                ]}
                 rows={detail.inspections.map((i) => [
                   formatDate(i.inspection_date),
                   `${i.progress_percentage}%`,
-                  <StatusBadge key="q" value={i.quality_status} />,
-                  <StatusBadge key="s" value={i.status} />,
+                  <StatusBadge
+                    key="q"
+                    value={i.quality_status}
+                  />,
+                  <StatusBadge
+                    key="s"
+                    value={i.status}
+                  />,
                 ])}
               />
             )}
@@ -316,6 +523,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       ),
     },
+
     {
       key: "documents",
       label: dict.tabs.documents,
@@ -323,19 +531,28 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       content: (
         <Card>
           <CardContent className="space-y-4 pt-5">
-            <DocumentUpload bucket="project-documents" projectId={p.id} />
+            <DocumentUpload
+              bucket="project-documents"
+              projectId={p.id}
+            />
+
             {detail.documents.length === 0 ? (
               <EmptyState title={dict.common.noResults} />
             ) : (
               <SimpleTable
                 head={["Category", "File", dict.fields.date]}
-                rows={detail.documents.map((d) => [enumLabel(d.category, locale), d.file_name, formatDate(d.created_at)])}
+                rows={detail.documents.map((d) => [
+                  enumLabel(d.category, locale),
+                  d.file_name,
+                  formatDate(d.created_at),
+                ])}
               />
             )}
           </CardContent>
         </Card>
       ),
     },
+
     {
       key: "history",
       label: dict.tabs.history,
@@ -356,11 +573,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         title={`${p.project_code} — ${p.project_name}`}
         description={`${p.road_name} · ${p.ward}`}
         actions={
-          <Link href="/officer/projects" className={buttonVariants({ variant: "outline" })}>
-            <ArrowLeft className="h-4 w-4" /> {dict.common.back}
+          <Link
+            href="/officer/projects"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {dict.common.back}
           </Link>
         }
       />
+
       <Tabs tabs={tabs} />
     </div>
   );
@@ -377,41 +599,104 @@ function NextAction({
 }) {
   switch (status) {
     case "DRAFT":
-      return <ActionButton action={() => submitProjectAction(projectId)}>Submit for review</ActionButton>;
+      return (
+        <ActionButton
+          action={submitProjectAction.bind(null, projectId)}
+        >
+          Submit for review
+        </ActionButton>
+      );
+
     case "SUBMITTED":
-      return <ActionButton action={() => reviewProjectAction(projectId)}>Begin review</ActionButton>;
+      return (
+        <ActionButton
+          action={reviewProjectAction.bind(null, projectId)}
+        >
+          Begin review
+        </ActionButton>
+      );
+
     case "UNDER_REVIEW":
-      return <p className="text-sm text-muted-foreground">Approve this project in the <strong>Approval</strong> tab.</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          Approve this project in the <strong>Approval</strong> tab.
+        </p>
+      );
+
     case "APPROVED":
-      return <p className="text-sm text-muted-foreground">Create and approve a budget in the <strong>Budget</strong> tab.</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          Create and approve a budget in the <strong>Budget</strong>{" "}
+          tab.
+        </p>
+      );
+
     case "BUDGET_APPROVED":
-      return <p className="text-sm text-muted-foreground">Create a tender in the <strong>Tender</strong> tab.</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          Create a tender in the <strong>Tender</strong> tab.
+        </p>
+      );
+
     case "TENDERING":
-      return <p className="text-sm text-muted-foreground">Record bids and select a contractor in the <strong>Contractor</strong> tab.</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          Record bids and select a contractor in the{" "}
+          <strong>Contractor</strong> tab.
+        </p>
+      );
+
     case "CONTRACTOR_SELECTED":
       return (
         <p className="text-sm text-muted-foreground">
-          Issue the work order in the <strong>Contractor</strong> tab.
+          Issue the work order in the <strong>Contractor</strong>{" "}
+          tab.
           {!hasActiveContract && " (No active contract found.)"}
         </p>
       );
+
     case "WORK_ORDER_ISSUED":
-      return <ActionButton action={() => startConstructionAction(projectId)}>Start construction</ActionButton>;
+      return (
+        <ActionButton
+          action={startConstructionAction.bind(null, projectId)}
+        >
+          Start construction
+        </ActionButton>
+      );
+
     case "UNDER_CONSTRUCTION":
       return <CompleteProjectForm projectId={projectId} />;
+
     case "COMPLETED":
       return <HandoverProjectForm projectId={projectId} />;
+
     case "HANDED_OVER":
-      return <p className="text-sm text-success">Project handed over. Operational road registered.</p>;
+      return (
+        <p className="text-sm text-success">
+          Project handed over. Operational road registered.
+        </p>
+      );
+
     case "CANCELLED":
-      return <p className="text-sm text-destructive">Project cancelled.</p>;
+      return (
+        <p className="text-sm text-destructive">
+          Project cancelled.
+        </p>
+      );
+
     default:
       return null;
   }
 }
 
 // Small server-rendered table helper reused across tabs.
-function SimpleTable({ head, rows }: { head: string[]; rows: React.ReactNode[][] }) {
+function SimpleTable({
+  head,
+  rows,
+}: {
+  head: string[];
+  rows: React.ReactNode[][];
+}) {
   return (
     <Table>
       <TableHeader>
@@ -421,6 +706,7 @@ function SimpleTable({ head, rows }: { head: string[]; rows: React.ReactNode[][]
           ))}
         </TableRow>
       </TableHeader>
+
       <TableBody>
         {rows.map((r, i) => (
           <TableRow key={i}>

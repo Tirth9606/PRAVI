@@ -29,9 +29,10 @@ export function LoginForm({ configured }: { configured: boolean }) {
       ? dict.auth.inactive
       : state.code === "notConfigured"
         ? dict.auth.notConfigured
-        : state.error
+        : state.code === "invalid"
           ? dict.auth.invalidCredentials
-          : null;
+          : // "unknown" (config / server / profile errors): show the real message
+            state.error ?? null;
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
